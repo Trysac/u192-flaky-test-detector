@@ -1,28 +1,15 @@
 # Security practices
 
-How this repository keeps the package and its users safe. The disclosure policy is in
-[../SECURITY.md](../SECURITY.md).
+## Threat Model
 
-## Secrets
+This utility parses untrusted JUnit XML files often generated in CI environments. It defends against:
 
-- No secrets, tokens or credentials in the repository, commit history, logs or prompts.
-- `gitleaks` runs as the last step of `npm run check` and as a dedicated CI job. Its configuration is
-  `.gitleaks.toml`.
-- Publishing credentials live only in the CI secret store or the maintainer's local npm configuration.
+- **XXE (XML External Entity)**: `<!DOCTYPE` declarations are strictly forbidden.
+- **Billion Laughs / Entity Expansion**: No DTD processing; only predefined and numeric entities are expanded.
+- **Billion Laughs / Recursive Expansion**: `maxDepth` (default 64) prevents deep recursion.
+- **Oversized Payloads**: `maxLength` (default 20,000,000 bytes) prevents memory exhaustion.
+- **Mismatched tags**: The linear tokenizer strictly validates tag closure and hierarchy.
 
-## Dependencies
+## Limits
 
-- Runtime dependencies are avoided; development dependencies are limited to the toolchain listed in
-  [STACK.md](STACK.md).
-- Dependabot opens weekly updates for npm packages and GitHub Actions.
-- Commit the generated `package-lock.json` so installs are reproducible.
-
-## Code
-
-- No `eval`, dynamic `Function` construction or shelling out from library code.
-- Inputs from callers are validated and rejected with explicit errors.
-
-## Publishing
-
-- Packages are published from a clean checkout after `npm run check` passes.
-- Only `dist/` is included in the published tarball.
+The code enforces strict bounds on input sizes (`maxLength` and `maxDepth`) and run limits (`maxRuns` 1000, `maxTestcases` 100,000) to ensure predictable performance and avoid DoS scenarios during analysis.
