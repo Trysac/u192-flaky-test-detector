@@ -9,4 +9,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Implement safe JUnit XML parser and flaky test analyzer with CLI runner.
 - Initial project structure from the factory utility template.

@@ -2,29 +2,24 @@
 
 ## Overview
 
-`@trysac/flaky-test-detector` is a small, dependency-free TypeScript library published to npm as ES modules with type
-declarations. Detect flaky tests from JUnit XML histories: same-commit pass and fail, Surefire flakyFailure, flip rate over runs and a bounded safe XML reader
+`@trysac/flaky-test-detector` provides offline analysis of test run histories based on standard JUnit XML reports.
 
-## Modules
+```
+ JUnit XML String  ──>  [parseJUnit]  ──>  TestResult[]
+                                                 │
+                                                 ▼
+ RunInput[] (commit, timestamp, results) ──>  [analyze]  ──>  Report
+                                                                │
+                                                                ▼
+                                                          [formatReport]  ──>  Text / JSON
+```
 
-| Module | Responsibility |
-|---|---|
-| `src/index.ts` | Public API. Everything consumers import is exported from here. |
+## Security and Robustness
 
-Add a row when you add a module. Internal modules are not re-exported unless they are part of the public API.
-
-## Boundaries
-
-- No runtime dependencies by default; any addition is justified in [STACK.md](STACK.md).
-- No I/O at import time. Functions are pure unless their documentation says otherwise.
-- Errors are thrown as built-in error types (`TypeError`, `RangeError`) with actionable messages.
-
-## Build and distribution
-
-`npm run build` compiles `src/` to `dist/` with `tsconfig.build.json`. Only `dist/` is published
-(`files` in `package.json`).
-
-## Decisions
-
-Architectural decisions are recorded in [decisions/](decisions/), starting with
-[0001](decisions/0001-record-architecture-decisions.md).
+1. **Safe Linear XML Parsing**: The tokenizer enforces depth limits (`maxDepth: 64` by default) and payload length limits (`maxLength: 20_000_000`). It strictly rejects `<!DOCTYPE` declarations, disallowing external entity inclusion (XXE) and recursive expansion attacks.
+2. **Entity Expansion Restrictions**: Only predefined XML entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;`) and numeric character entities (`&#...;`, `&#x...;`) are expanded.
+3. **Deterministic Classification Order**:
+   - `flaky`: Test has at least one same-commit pass and fail, or has a Surefire rerun marker.
+   - `broken`: All considered runs failed (n >= 1).
+   - `suspect`: Run count meets threshold (`n >= minRuns`) and `flipRate >= suspectFlipRate`.
+   - `stable`: Everything else.
